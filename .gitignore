@@ -1,0 +1,2 @@
+# Ignore the build directory (where generated files and build artifacts go)
+build/
