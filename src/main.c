@@ -3,14 +3,15 @@
 #include <string.h>
 #include <windows.h>
 #include <errno.h>
+
 #include "errors.h"
 #include "lex.h"
+#include "parser.h"
 
-
-static const int INITIAL_TOKEN_CAPACITY = 10;  // Initial capacity for the tokenArr in lexer_Output instance
 
 
 int main(int argc, char *argv[]) {
+
 
     // To benchmark the performance of the executable
     LARGE_INTEGER frequency, start, end;
@@ -34,25 +35,21 @@ int main(int argc, char *argv[]) {
     //-----------------------------------------------------------------------------------------------------------//
 
 
-
     // Begin the lexical analysis part
 
     // Create and initialize instance of TokenList
     TokenList tokenList;
-
-    tokenList.maxCapacity = INITIAL_TOKEN_CAPACITY;
-    tokenList.position = -1;
-    tokenList.array = malloc(tokenList.maxCapacity*sizeof(Token*));
-    if (tokenList.array == NULL) {
-        fprintf(stderr, "Fatal error: memory could not be allocated.\n\n");
-        return ERROR_MEMORY_ALLOCATION_FAILURE;
+    int initTokenList = init_tokenList(&tokenList);
+    if (initTokenList == 1) {
+        fprintf(stderr, "Fatal error: token list could not be created.\n\n");
+        return ERROR_FATAL_FUNCTION_CALL;
     }
 
     // Perform lexical analysis on input string (argv[1])
     int lexerOutput = lexical_analyzer(argv[1], &tokenList);
     if (lexerOutput == 1) {
-        fprintf(stderr, "Fatal error: lexical analysis could not be ran.\n\n");
-        int freeTokenListResult = free_tokenList_memory(&tokenList);
+        fprintf(stderr, "Fatal error: lexical analysis could not be run.\n\n");
+        free_tokenList_memory(&tokenList);
         return ERROR_FATAL_FUNCTION_CALL;
     }
 
@@ -60,13 +57,44 @@ int main(int argc, char *argv[]) {
     int printTokenListOutput = print_tokenList(&tokenList);
     if (printTokenListOutput == 1) {
         fprintf(stderr, "Fatal error: token list could not be printed.\n\n");
-        int freeTokenListResult = free_tokenList_memory(&tokenList);
+        free_tokenList_memory(&tokenList);
         return ERROR_FATAL_FUNCTION_CALL;
     }
 
 
+    // Begin parsing parting
+
+    // Create and initialize an instance of StackTokenList to represent postfix form of the lexer TokenList.
+    StackTokenList postfixTokenList;
+    int initPostfixList = init_StackTokenList(&tokenList, &postfixTokenList);
+    if (initPostfixList == 1) {
+        fprintf(stderr, "Fatal error: postfix token list could not be initialized.\n\n");
+        return ERROR_FATAL_FUNCTION_CALL;
+    }
+
+    // Carry out the shunting yard algorithm to parse the lexer token list into RPF
+    int parser = shunting_yard_algorithm(&tokenList, &postfixTokenList);
+    if (parser == 1) {
+        fprintf(stderr, "Fatal error: parser could not be run.\n\n");
+        free_tokenList_memory(&tokenList);
+        free_stackTokenList_memory(&postfixTokenList);
+        return ERROR_FATAL_FUNCTION_CALL;
+    }
+
+    // Print the tokenList 
+    int printPostfixTokenList = print_stackTokenList(&postfixTokenList);
+    if (printPostfixTokenList == 1) {
+        fprintf(stderr, "Fatal error: token list could not be printed.\n\n");
+        free_tokenList_memory(&tokenList);
+        free_stackTokenList_memory(&postfixTokenList);
+        return ERROR_FATAL_FUNCTION_CALL;
+    }
+
+
+
     // Free all memory
-    int freeTokenListResult = free_tokenList_memory(&tokenList);
+    free_tokenList_memory(&tokenList);
+    free_stackTokenList_memory(&postfixTokenList);
 
 
 

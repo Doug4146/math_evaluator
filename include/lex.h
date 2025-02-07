@@ -11,7 +11,7 @@ typedef enum {
 
     TOKEN_OPEN_PARENTHESIS, TOKEN_CLOSED_PARENTHESIS,
 
-    TOKEN_IDENTIFIER, 
+    TOKEN_FUNCTION, 
 
     TOKEN_KEYWORD_PI, TOKEN_KEYWORD_E,
 
@@ -40,6 +40,13 @@ typedef struct TokenList {
 // Prints the data of the input `token` in format: "Token(type: "TYPE_TOKEN", value: "VALUE")"
 // Returns 0 upon successful call, and 1 if errors encountered. Errors are fatal.
 int print_token(Token* token);
+
+
+
+// Initializes the fields for a `tokenList` struct instance
+// Returns 0 if successful, 1 if errors encountered. Errors are fatal.
+int init_tokenList(TokenList* tokenList);
+
 
 
 /**

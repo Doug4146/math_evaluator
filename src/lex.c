@@ -4,7 +4,7 @@
 #include "errors.h"
 #include "lex.h"
 
-
+static const int INITIAL_TOKEN_CAPACITY = 10;  // Initial capacity for the tokenArr in lexer_Output instance
 static const float FACTOR_TOKEN_INCREASE = 1.5;  // Factor by which to increase token capacity
 
 
@@ -12,18 +12,30 @@ static const float FACTOR_TOKEN_INCREASE = 1.5;  // Factor by which to increase 
 // Returns NULL upon failure (invalid token type inputted). Errors are fatal.
 static char* token_type_to_string(TypeToken typeToken) {
     switch (typeToken) {
-        case TOKEN_NUMBER: return "TOKEN_NUMBER";
-        case TOKEN_OPERATOR_PLUS: return "TOKEN_OPERATOR_PLUS";
-        case TOKEN_OPERATOR_MINUS: return "TOKEN_OPERATOR_MINUS";
-        case TOKEN_OPERATOR_MULTIPLY: return "TOKEN_OPERATOR_MULTIPLY";
-        case TOKEN_OPERATOR_DIVIDE: return "TOKEN_OPERATOR_DIVIDE";
-        case TOKEN_OPEN_PARENTHESIS: return "TOKEN_OPEN_PARENTHESIS";
-        case TOKEN_CLOSED_PARENTHESIS: return "TOKEN_CLOSED_PARENTHESIS";
-        case TOKEN_IDENTIFIER: return "TOKEN_IDENTIFIER";
-        case TOKEN_KEYWORD_E: return "TOKEN_KEYWORD_E";
-        case TOKEN_KEYWORD_PI: return "TOKEN_KEYWORD_PI";
-        case TOKEN_EOF: return "TOKEN_EOF";
-        default: return NULL;
+        case TOKEN_NUMBER: 
+            return "TOKEN_NUMBER";
+        case TOKEN_OPERATOR_PLUS: 
+            return "TOKEN_OPERATOR_PLUS";
+        case TOKEN_OPERATOR_MINUS: 
+            return "TOKEN_OPERATOR_MINUS";
+        case TOKEN_OPERATOR_MULTIPLY: 
+            return "TOKEN_OPERATOR_MULTIPLY";
+        case TOKEN_OPERATOR_DIVIDE: 
+            return "TOKEN_OPERATOR_DIVIDE";
+        case TOKEN_OPEN_PARENTHESIS: 
+            return "TOKEN_OPEN_PARENTHESIS";
+        case TOKEN_CLOSED_PARENTHESIS: 
+            return "TOKEN_CLOSED_PARENTHESIS";
+        case TOKEN_FUNCTION: 
+            return "TOKEN_FUNCTION";
+        case TOKEN_KEYWORD_E: 
+            return "TOKEN_KEYWORD_E";
+        case TOKEN_KEYWORD_PI: 
+            return "TOKEN_KEYWORD_PI";
+        case TOKEN_EOF: 
+            return "TOKEN_EOF";
+        default: 
+            return NULL;
     }
 }
 
@@ -71,6 +83,24 @@ static Token* create_token(TypeToken typeToken, char* pLexemmeStart, int length)
     token->length = length;
 
     return token; 
+}
+
+
+int init_tokenList(TokenList* tokenList) {
+
+    // Validating function parameters
+    if (tokenList == NULL) {
+        return ERROR_INVALID_FUNCTION_PARAMETERS;
+    }
+
+    tokenList->maxCapacity = INITIAL_TOKEN_CAPACITY;
+    tokenList->array = malloc(tokenList->maxCapacity*sizeof(Token*));
+    if (tokenList->array == NULL) {
+        // fprintf(stderr, "Fatal error: memory could not be allocated.\n\n");
+        return ERROR_MEMORY_ALLOCATION_FAILURE;
+    }
+    tokenList->position = -1;
+
 }
 
 
@@ -215,13 +245,13 @@ static Token* scan_number(char* lexemmeStart) {
 
 
 /*
-- Is called when lexer identifies a letter. Traverses string section pointed to by `lexemmeStart` and checks if identifier
-- Identifiers may ONLY include letter characters (a-z) and must be immediately followed by a left parenthesis
+- Is called when lexer identifies a letter. Traverses string section pointed to by `lexemmeStart` and checks if potential function
+- Functions may ONLY include letter characters (a-z) and must be immediately followed by a left parenthesis
 - Upon detection of invaid syntax, an error message is printed, and NULL is returned.
-- If valid identifier found, creates a new token and `returns` its pointer. All errors are fatal.
+- If potentially valid function found, creates a new token and `returns` its pointer. All errors are fatal.
 *
 */
-static Token* scan_identifier(char* lexemmeStart) {
+static Token* scan_function(char* lexemmeStart) {
 
     // Validating function parameters
     if (lexemmeStart == NULL) {
@@ -232,13 +262,13 @@ static Token* scan_identifier(char* lexemmeStart) {
     int counter = 0;
     char* traverser = lexemmeStart;
 
-    // Scan for the entire identifier.
+    // Scan for the entire function.
     while (is_alpha(*traverser)) {
         counter++; 
         traverser++; 
     }
 
-    // Check if the identifier is a known keyword constant (e or pi)
+    // Check if the function name is a known keyword constant (e or pi)
 
     if (counter == 1 && (strncmp(lexemmeStart, "e", 1) == 0)) {
         // Check if the keyword is not followed by a valid character
@@ -262,15 +292,15 @@ static Token* scan_identifier(char* lexemmeStart) {
     }
 
 
-    // Check if the identifier is not followed by a valid character
+    // Check if the function is not followed by a valid character
     if (*traverser != '(') { 
-        // Report the invalid number syntax and terminate the program
-        fprintf(stderr, "\nError: invalid character after identifier at '%.*s'.\n", counter+1, lexemmeStart);
+        // Report the invalid function syntax and terminate the program
+        fprintf(stderr, "\nError: invalid character after function at '%.*s'.\n", counter+1, lexemmeStart);
         return NULL;
     }
 
-    // Create and return valid number token. If NULL, lexer_analyzer will flag it.
-    return create_token(TOKEN_IDENTIFIER, lexemmeStart, counter);
+    // Create and return valid function token. If NULL, lexer_analyzer will flag it.
+    return create_token(TOKEN_FUNCTION, lexemmeStart, counter);
 
 }
 
@@ -326,9 +356,9 @@ int lexical_analyzer(char* sourceString, TokenList* tokenList) {
                     pTraverse += newToken->length;
                     break;
                 }
-                // When letter is encountered, run following logic to determine if identifier
+                // When letter is encountered, run following logic to determine if function
                 else if (is_alpha(*pTraverse)) {
-                    newToken = scan_identifier(pTraverse);
+                    newToken = scan_function(pTraverse);
                     if (newToken == NULL) {
                         return ERROR_FATAL_FUNCTION_CALL;
                     }
@@ -423,6 +453,7 @@ int free_tokenList_memory(TokenList* tokenList) {
 
     // Subroutine ran successfully
     return 0;
+
 }
 
 
