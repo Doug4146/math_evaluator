@@ -19,6 +19,15 @@ typedef struct StackTokenList {
 } StackTokenList;
 
 
+// Structure for stack for evaluatig the RPF token list
+// All numbers are converted to doubles
+typedef struct DoubleStack {
+    double* array;
+    int top;
+} DoubleStack;
+
+
+
 // Function for initializing `stackTokenList` based on the `lexicalTokenList` produced by the lexer module
 // Note that any instance of StackTokenList can ONLY store up to the maximum number of tokens produced by the lexer or less
 // Returns 0 upon successful call. 1 if errors encountered. Errors are fatal.
@@ -46,6 +55,9 @@ int print_stackTokenList(StackTokenList* stackTokenList);
 int free_stackTokenList_memory(StackTokenList* stackTokenList);
 
 
+// Function for evaluating the `postfixTokenList` Returns the final answer (double).
+// Any errors with memory allocation and etc are fatal.
+double evaluate_postfixTokenList(StackTokenList* postfixTokenList);
 
 
 

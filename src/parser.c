@@ -1,21 +1,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "errors.h"
 #include "lex.h"
 #include "parser.h"
 
 
+const static double pi = 3.14159265358979;
+const static double  e = 2.71828182845905;
+const static double EPSILON = 1e-10;
+
+
 int init_StackTokenList(TokenList* lexicalTokenList, StackTokenList* stackTokenList) {
 
     // Validating function parameters
-    if (lexicalTokenList == NULL || lexicalTokenList->array == NULL || lexicalTokenList->position < 0 || stackTokenList == NULL) {
+    if (lexicalTokenList == NULL || lexicalTokenList->array == NULL || stackTokenList == NULL) {
         return ERROR_INVALID_FUNCTION_PARAMETERS;
     }
 
     // Initialize postfixTokenList fields
-    stackTokenList->array = malloc(lexicalTokenList->position * sizeof(Token*));
+    stackTokenList->array = malloc((lexicalTokenList->position + 1) * sizeof(Token*));
     if (stackTokenList->array == NULL) {
         return ERROR_MEMORY_ALLOCATION_FAILURE;
     }
@@ -23,7 +29,6 @@ int init_StackTokenList(TokenList* lexicalTokenList, StackTokenList* stackTokenL
 
     // Subroutine ran successfully
     return 0;
-
 }
 
 
@@ -32,7 +37,7 @@ int init_StackTokenList(TokenList* lexicalTokenList, StackTokenList* stackTokenL
 static int push_StackTokenList(StackTokenList* stackTokenList, Token* token) {
 
     // Validating function parameters
-    if (stackTokenList == NULL || token == NULL) {
+    if (stackTokenList == NULL || stackTokenList->array == NULL || token == NULL) {
         return ERROR_INVALID_FUNCTION_PARAMETERS;
     }
 
@@ -42,7 +47,6 @@ static int push_StackTokenList(StackTokenList* stackTokenList, Token* token) {
 
     // Subroutine ran successfully
     return 0;
-
 }
 
 
@@ -51,7 +55,7 @@ static int push_StackTokenList(StackTokenList* stackTokenList, Token* token) {
 static Token* pop_StackTokenList(StackTokenList* stackTokenList) {
 
     // Validating function parameters
-    if (stackTokenList == NULL || stackTokenList->top == -1) {
+    if (stackTokenList == NULL || stackTokenList->array == NULL || stackTokenList->top < 0) {
         return NULL;
     }
 
@@ -63,6 +67,65 @@ static Token* pop_StackTokenList(StackTokenList* stackTokenList) {
     // Subroutine ran successfully
     return poppedToken;
 
+}
+
+
+// Function for initializing the fields for an instance of a doubleStack
+// Assumes the max # of elements needed for the array is the # of tokens in the postfix array
+// Returns 0 upon success, and 1 upon failure/
+static int init_doubleStack(StackTokenList* stackTokenList, DoubleStack* doubleStack) {
+
+    // Validating function parameters
+    if (stackTokenList == NULL || stackTokenList->array == NULL || doubleStack == NULL) {
+        return ERROR_INVALID_FUNCTION_PARAMETERS;
+    }
+
+    // Initialize doubleStack fields
+    doubleStack->array = malloc((stackTokenList->top + 1) * sizeof(double));
+    if (doubleStack->array == NULL) {
+        return ERROR_MEMORY_ALLOCATION_FAILURE;
+    }
+    doubleStack->top = -1;
+
+    // Subroutine ran successfully
+    return 0;
+}
+
+
+// Function for pushing a double val onto the `doubleStack`. 
+// Returns 0 upon successful call. 1 if errors encountered. Errors are fatal.
+static int push_doubleStack(DoubleStack* doubleStack, double number) {
+
+    // Validating function parameters
+    if (doubleStack == NULL || doubleStack->array == NULL) {
+        return ERROR_INVALID_FUNCTION_PARAMETERS;
+    }
+
+    // Push the token pointer to the stack
+    doubleStack->top++;  
+    doubleStack->array[doubleStack->top] = number;
+
+    // Subroutine ran successfully
+    return 0;
+}
+
+
+// Function for popping an element off of the `doubleStack`. 
+// Returns the value (double) of tbe popped element
+static double pop_doubleStack(DoubleStack* doubleStack) {
+
+    // Validating function parameters
+    if (doubleStack == NULL || doubleStack->array == NULL || doubleStack->top < 0) {
+        return 0;
+    }
+
+    // Push the token pointer to the stack
+    double popped = doubleStack->array[doubleStack->top];  
+    doubleStack->array[doubleStack->top] = 0;
+    doubleStack->top--;
+
+    // Subroutine ran successfully
+    return popped;
 }
 
 
@@ -90,8 +153,7 @@ static int get_precedence(TypeToken typeOperator) {
 // }
 
 
-static const char* allowedFunctions[] = {"sin", "cos", "tan", "csc", "sec", "cot",
-"asin", "acos", "atan", "acsc", "asec", "acot", "ln", "log", "exp"};
+static const char* allowedFunctions[] = {"sin", "cos", "tan", "asin", "acos", "atan", "ln", "log", "exp"};
 static const int numFunctions = sizeof(allowedFunctions) / sizeof(allowedFunctions[0]);
 
 
@@ -262,6 +324,188 @@ int free_stackTokenList_memory(StackTokenList* stackTokenList) {
     return 0;
 
 }
+
+
+// Fuction for converting a number represented by a substring to a double value.
+// `start` is a pointer to some element of the string, and `length` is length of substring. 
+// Returns the double value of the number in string form.
+static double convert_to_double(char *start, int length) {
+
+    // Null-terminate the substring by creating a new temporary string
+    char *temp = (char *)malloc(length + 1);  // +1 for null terminator
+    if (temp == NULL) {
+        return 0;
+    }
+
+    // Copy the substring to temp and null-terminate it
+    strncpy(temp, start, length);
+    temp[length] = '\0';
+
+    // Convert the substring to a double using strtod
+    double result = atof(temp);
+
+    // Free the allocated memory
+    free(temp);
+
+    return result;
+}
+
+
+// Function for evaluating the `postfixTokenList` Returns the final answer (double).
+// Any errors with memory allocation and etc are fatal.
+double evaluate_postfixTokenList(StackTokenList* postfixTokenList) {
+
+    // Validate input parameters
+    if (postfixTokenList == NULL || postfixTokenList->array == NULL || postfixTokenList->top < 0) {
+        return 0;
+    }
+
+    // Create a doubleStack for evaluation
+    DoubleStack doubleStack;
+    int initDoubleStack = init_doubleStack(postfixTokenList, &doubleStack);
+    if (initDoubleStack == 1) {
+        return 0;
+    }
+
+    // Main loop for iterating over the tokens in postfixTokenList
+    for (int i = 0; i < postfixTokenList->top + 1; i++) {
+
+        TypeToken typeToken = postfixTokenList->array[i]->typeToken;
+
+        // Cases when current token is of type number or keyword constant (pi or e). Push to stack.
+        if (typeToken == TOKEN_NUMBER) {
+            double number = convert_to_double(postfixTokenList->array[i]->pLexemmeStart, postfixTokenList->array[i]->length);
+            int push = push_doubleStack(&doubleStack, number);
+            if (push == 1) {
+                return 0;
+            }
+        }
+        else if (typeToken == TOKEN_KEYWORD_PI) {
+            int push = push_doubleStack(&doubleStack, pi);
+            if (push == 1) {
+                return 0;
+            }
+        }
+        else if (typeToken == TOKEN_KEYWORD_E) {
+            int push = push_doubleStack(&doubleStack, e);
+            if (push == 1) {
+                return 0;
+            }
+        }
+        // Cases when current token is an operator (+, -, *, /)
+        else if (typeToken == TOKEN_OPERATOR_PLUS ||
+                 typeToken == TOKEN_OPERATOR_MINUS ||
+                 typeToken == TOKEN_OPERATOR_MULTIPLY ||
+                 typeToken == TOKEN_OPERATOR_DIVIDE) {
+
+            // Pop two elements from double stack (last element popped is leftmost in order)
+            double pop2 = pop_doubleStack(&doubleStack);
+            double pop1 = pop_doubleStack(&doubleStack);
+
+            double result;
+
+            switch (typeToken) {
+                case TOKEN_OPERATOR_PLUS:
+                    result = pop1 + pop2;
+                    break;
+                case TOKEN_OPERATOR_MINUS:
+                    result = pop1 - pop2;
+                    break;
+                case TOKEN_OPERATOR_MULTIPLY:
+                    result = pop1 * pop2;
+                    break;
+                case TOKEN_OPERATOR_DIVIDE:
+                    if (pop2 == 0) {
+                        fprintf(stderr, "Error: divide by zero.\n");
+                        return 0;
+                    }
+                    result = pop1 / pop2;
+                    break;
+            }
+            int push = push_doubleStack(&doubleStack, result);
+            if (push == 1) {
+                return 0;
+            }
+
+        }
+        // "sin", "cos", "tan", "asin", "acos", "atan", "ln", "log", "exp". ADD SUPPORT FOR ASIN, ACOS, ATAN
+        // Case when current token is a function. Pop one number and apply function and push result.
+        else if (typeToken == TOKEN_FUNCTION) {
+
+            // Determine which function it is and apply
+            if (strncmp(postfixTokenList->array[i]->pLexemmeStart, "sin", postfixTokenList->array[i]->length) == 0) {
+                double pop = pop_doubleStack(&doubleStack);
+                int push = push_doubleStack(&doubleStack, sin(pop));
+                if (push == 1) {
+                    return 0;
+                }
+            }
+            else if (strncmp(postfixTokenList->array[i]->pLexemmeStart, "cos", postfixTokenList->array[i]->length) == 0) {
+                double pop = pop_doubleStack(&doubleStack);
+                int push = push_doubleStack(&doubleStack, cos(pop));
+                if (push == 1) {
+                    return 0;
+                }
+            }
+            else if (strncmp(postfixTokenList->array[i]->pLexemmeStart, "tan", postfixTokenList->array[i]->length) == 0) {
+                double x = pop_doubleStack(&doubleStack);
+                // Check for domain issues with x in tan(x)
+                if (fabs(cos(x)) < EPSILON) { // tan = sin/cos => undefined when cos = 0 or cos = REALLY close to 0
+                    fprintf(stderr, "Error: tan(x) is undefined for x = %.4f.\n", x);
+                    return 0;
+                }
+                int push = push_doubleStack(&doubleStack, tan(x));
+                if (push == 1) {
+                    return 0;
+                }
+            }
+            else if (strncmp(postfixTokenList->array[i]->pLexemmeStart, "ln", postfixTokenList->array[i]->length) == 0) {
+                double x = pop_doubleStack(&doubleStack);
+                // Check for domain issues with x in ln(x)
+                if (x < 0.0 + EPSILON) {
+                    fprintf(stderr, "Error: ln(x) is undefined for x <= 0.\n", x);
+                    return 0;
+                }
+                int push = push_doubleStack(&doubleStack, log(x)); // log means log_e
+                if (push == 1) {
+                    return 0;
+                }
+            }
+            else if (strncmp(postfixTokenList->array[i]->pLexemmeStart, "log", postfixTokenList->array[i]->length) == 0) {
+                double x = pop_doubleStack(&doubleStack);
+                // Check for domain issues with x in ln(x)
+                if (x < 0.0 + EPSILON) {
+                    fprintf(stderr, "Error: log(x) is undefined for x <= 0.\n", x);
+                    return 0;
+                }
+                int push = push_doubleStack(&doubleStack, log10(x));
+                if (push == 1) {
+                    return 0;
+                }
+            }
+            else if (strncmp(postfixTokenList->array[i]->pLexemmeStart, "exp", postfixTokenList->array[i]->length) == 0) {
+                double x = pop_doubleStack(&doubleStack);
+                int push = push_doubleStack(&doubleStack, exp(x));
+                if (push == 1) {
+                    return 0;
+                }
+            }
+            else {
+                fprintf(stderr, "Error: Unknown function.\n");
+                return 0;
+            }
+        }
+
+    }
+
+    double finalAnswer = pop_doubleStack(&doubleStack);
+    free(doubleStack.array);
+
+    return finalAnswer;
+
+}
+
+
 
 
 

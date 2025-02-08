@@ -90,6 +90,9 @@ int main(int argc, char *argv[]) {
         return ERROR_FATAL_FUNCTION_CALL;
     }
 
+    // Do the final evaluation
+    double finalAnswer = evaluate_postfixTokenList(&postfixTokenList);
+    printf("\n\nFinal answer: %.10f.\n\n", finalAnswer);
 
 
     // Free all memory
