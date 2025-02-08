@@ -1,12 +1,14 @@
-# math_evaluatpr
+# math_evaluator
 
-This project is a simple math engine that performs **lexical analysis** on mathematical expressions. 
-It breaks down the input expression into tokens (like numbers, operators, and parentheses) that can be processed further.
+This project is a simple command-line mathematical expression evaluator that evaluates expressions such as `35* sin(cos(tan(e / 3)))`. 
 
 ## Features
-- **Lexical analysis** of math expressions like `3 + 5 * (2 - 8)`
-- Supports operators: `+`, `-`, `*`, `/`
-- Supports parentheses `()` and single-digit integer literals
+- Tokenizes the user-inputted string and uses the shunting-yard algorithm to parse the list of tokens and convert into reverse polish form.
+  This is then evaluated directly.
+- Supports integers (`2, 190`), floats (`2.2, 190.190`) and numbers in scientific form (`2.2E+2, 4E-4`) (Note there must be a `+` or `-` infront of E)
+- Supports `e` and `pi` as predefined constants
+- Supports basic operatoros `+` ,`-`, `*`, `/` and parentheses `(`, `)`
+- Supports functions: `sin`, `cos`, `tan`, `ln`, `log`, `exp` (Note that a `(` must always be written directly in front of a function name)
 
 ## Requirements
 - **MinGW** (tested with version 14.2.0, includes GCC as the C compiler)
@@ -16,7 +18,7 @@ It breaks down the input expression into tokens (like numbers, operators, and pa
 ## Build Instructions
 
 1. **Fork the repository**:
-   - Go to https://github.com/Doug4146/Math-Engine
+   - Go to https://github.com/Doug4146/math_evaluator
    - Click on the "Fork" button at the top-right corner to create your own copy of the repository
 1. **Clone the forked repository**:
    ```bash
@@ -34,15 +36,7 @@ It breaks down the input expression into tokens (like numbers, operators, and pa
    mingw32-make
    
 ## Usage
-- To run the program with an math expression:
+- Run the program exectutable with precisly one math expression in string format:
    ```bash
-   .\math_engine.exe  "2 + 1 - 2"
-- Example output
-   ```bash
-   Token(type: TOKEN_NUMBER, value: '2')
-   Token(type: TOKEN_OPERATOR_PLUS, value: '+')
-   Token(type: TOKEN_NUMBER, value: '1')
-   Token(type: OPERATOR_MINUS, value: '-')
-   Token(type: LITERAL_INT, value: '2')
-   Token(type: TOKEN_EOF, value: '\0')
+   .\math_engine.exe  "2*sin(cos(e*pi) / 1 - 2"
     
