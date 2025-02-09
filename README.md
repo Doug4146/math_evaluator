@@ -1,6 +1,7 @@
 # math_evaluator
 
-This project is a simple command-line mathematical expression evaluator that evaluates expressions such as `35* sin(cos(tan(e / 3)))`. 
+This project is a simple command-line mathematical expression evaluator that evaluates expressions such as 
+`35* sin(cos(tan(e / 3)))`. 
 
 ## Features
 - Tokenizes the user-inputted string and uses the shunting-yard algorithm to parse the list of tokens and convert into reverse polish form.
@@ -38,5 +39,5 @@ This project is a simple command-line mathematical expression evaluator that eva
 ## Usage
 - Run the program exectutable with precisly one math expression in string format:
    ```bash
-   .\math_engine.exe  "2*sin(cos(e*pi) / 1 - 2"
+   .\math_evaluator.exe  "2*sin(cos(e*pi) / 1 - 2"
     
